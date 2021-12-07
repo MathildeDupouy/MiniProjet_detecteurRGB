@@ -13,10 +13,11 @@
 
 //#include <Adafruit_I2CDevice.h>
 
-#define TCS34725_ADDRESS (0x29)     /**< I2C address **/
+#define TCS34725_ADDRESS 0x52 //(0x29)     /**< I2C address **/ 01010010
 #define TCS34725_COMMAND_BIT (0x80) /**< Command bit **/
 #define TCS34725_ENABLE (0x00)      /**< Interrupt Enable register */
 #define TCS34725_ENABLE_AIEN (0x10) /**< RGBC Interrupt Enable */
+#define TCS34725_STATUS (0x13)
 #define TCS34725_ENABLE_WEN                                                    \
   (0x08) /**< Wait Enable - Writing 1 activates the wait timer */
 #define TCS34725_ENABLE_AEN                                                    \

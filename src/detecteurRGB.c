@@ -91,22 +91,24 @@ uint8_t TCS_read_color(char color){
  * Lecture des couleurs
  * rouge, vert et bleu   :  pointeur vers ou stocker les couleurs
  */
-void TCS_read_colors(uint16_t *rouge, uint16_t *vert, uint16_t *bleu)
+void TCS_read_colors(uint16_t *rouge, uint16_t *vert, uint16_t *bleu, uint16_t *intensite)
 {
-	uint8_t reg_ad = 0x16;
+	uint8_t reg_ad = 0x14; //Adresse du bit de la donnée de clarte
 
 	uint8_t I2CMasterBuffer[2]; // ad, #reg
 	uint8_t I2CSlaveBuffer[1];
 	uint8_t I2CWriteLength=1;
-	uint8_t I2CReadLength=6;
+	uint8_t I2CReadLength=8;
 	I2CMasterBuffer[0]=TCS34725_ADDRESS;
 	I2CMasterBuffer[1]=(0b101 << 5) | reg_ad; //Command, auto-increment protocol, adresse du registre
 	I2CmasterWriteRead( I2CMasterBuffer, I2CSlaveBuffer, I2CWriteLength, I2CReadLength );
 
 	//Recuperation des donnees (rgb avec lowbyte puis high byte a chaque fois)
-	*rouge = (I2CSlaveBuffer[1]<<8) | I2CSlaveBuffer[0];
-	*vert = (I2CSlaveBuffer[3]<<8) | I2CSlaveBuffer[2];
-	*bleu = (I2CSlaveBuffer[5]<<8) | I2CSlaveBuffer[4];
+	*intensite = (I2CSlaveBuffer[1]<<8) | I2CSlaveBuffer[0];
+	*rouge = (I2CSlaveBuffer[3]<<8) | I2CSlaveBuffer[2];
+	*vert = (I2CSlaveBuffer[5]<<8) | I2CSlaveBuffer[4];
+	*bleu = (I2CSlaveBuffer[7]<<8) | I2CSlaveBuffer[6];
+
 }
 
 uint8_t TCS_read(void)
@@ -153,7 +155,7 @@ int main(void) {
 	char texte_rouge[16];
 
 	//Variable des couleurs lues
-	uint16_t rouge, bleu, vert;
+	uint16_t rouge, bleu, vert, intensite;
 
 	//Configuration de l'horloge à 15 MHz
 		LPC_PWRD_API->set_fro_frequency(30000);
@@ -187,9 +189,9 @@ int main(void) {
 		}
 		if(bp2==enfonce && bp2_prec != bp2)
 		{
-			TCS_read_colors(&rouge, &vert, &bleu);
-			sprintf(texte_rouge, "r%d", rouge);
-			sprintf(texte_lecture, "v%d b%d", vert, bleu);
+			TCS_read_colors(&rouge, &vert, &bleu, &intensite);
+			sprintf(texte_rouge, "r%d v%d", rouge, vert);
+			sprintf(texte_lecture, "b%d i%d", bleu, intensite);
 			affichage(texte_rouge, texte_lecture);
 		}
 		bp1_prec = bp1;

@@ -89,7 +89,7 @@ uint8_t TCS_read_color(char color){
 
 /**
  * Lecture des couleurs
- * rouge, vert et bleu   :  pointeur vers ou stocker les couleurs
+ * Entrees : intensite, rouge, vert et bleu   :  pointeur vers ou stocker les couleurs et l'intensite
  */
 void TCS_read_colors(uint16_t *rouge, uint16_t *vert, uint16_t *bleu, uint16_t *intensite)
 {
@@ -111,17 +111,6 @@ void TCS_read_colors(uint16_t *rouge, uint16_t *vert, uint16_t *bleu, uint16_t *
 
 }
 
-uint8_t TCS_read(void)
-{
-	uint8_t I2CSlaveBuffer[1];
-	uint8_t I2CReadLength=1;
-
-	I2CmasterRead(TCS34725_ADDRESS, I2CSlaveBuffer, I2CReadLength );
-	// autre possibilité :
-//	I2CmasterWrite(I2CMasterBuffer, I2CWriteLength );
-//	I2CmasterRead( MCP23_I2C_AD, I2CSlaveBuffer, I2CReadLength );
-	return I2CSlaveBuffer[0];
-}
 
 /**
  * Affiche du texte sur les deux lignes du lcd
@@ -141,6 +130,41 @@ void affichage(char* texte_l1, char* texte_l2)
 	lcd_puts("                ");
 }
 
+/**
+ * Traduit les valeurs des canaux rgb et de la luminosite et stocke la couleur en texte
+ * Entrees : 	rouge, vert et bleu : valeurs des canaux rgb respectivement
+ * 				intensite 			: valeurs du canal de l'intensite lumineuse
+ * 				couleur				: pointer vers ou stocker le texte de la couleur
+ */
+void traduction_color(uint16_t rouge, uint16_t vert, uint16_t bleu, uint16_t intensite, char** couleur)
+{
+	char texte_couleur[16];
+	*couleur = "Rapprochez-vous svp";
+
+	//Traduction en pourcentage
+	float somme = rouge + vert + bleu;
+	float rougep =  rouge / somme*100;
+	float bleup = bleu / somme*100;
+	float vertp = vert / somme*100;
+
+	if (rougep > 55) *couleur = "rouge";
+	else if (bleup > 45)  *couleur = "bleu";
+	else if (vertp > 45)  *couleur = "vert";
+
+	else if ((rougep >= 20) && (rougep <= 40)) //Rouge vaut 30% a dix pourcents pres
+	{
+		if ((vertp >= 20) && (vertp <= 40)) //vert vaut 30% a dix pourcents pres
+		{
+			*couleur = (intensite > 32767) ? "blanc" : "noir";
+		}
+	}
+	else if(bleup <25) *couleur = "jaune";
+	else if(vertp <25) *couleur = "rose";
+	else if(rougep <25) *couleur = "cyan";
+
+	sprintf(texte_couleur, "r%d%% v%d%% b%d%%", (int)rougep, (int)vertp, (int)bleup);
+	affichage(*couleur, texte_couleur);
+}
 
 int main(void) {
 	//Variables pour les etats des boutons
@@ -149,13 +173,10 @@ int main(void) {
 	uint8_t bp2 = BP2;
 	uint8_t bp2_prec = BP2;
 
-	//Variable de lecture
-	uint8_t lecture;
-	char texte_lecture[16];
-	char texte_rouge[16];
 
 	//Variable des couleurs lues
 	uint16_t rouge, bleu, vert, intensite;
+	char couleur[16];
 
 	//Configuration de l'horloge à 15 MHz
 		LPC_PWRD_API->set_fro_frequency(30000);
@@ -170,29 +191,19 @@ int main(void) {
 
 	//Initialisation de l'afficheur lcd et affichage d'un texte
 	init_lcd();
-	lcd_puts("Detecteur colors");
+	affichage("Detecteur colors", "appuyez sur BP2!");
 	TCS_write_reg(0x00, 0b00000011);
 
 	while (1) {
 		bp1 = BP1;
 		bp2 = BP2;
 
-		//Activation du rgb et power on
-
-		//lecture = TCS_read();
-
-		if(bp1==enfonce && bp1_prec != bp1)
-		{
-			lecture = TCS_read_color('r');
-			sprintf(texte_lecture, "val = %x", lecture);
-			affichage("rouge lu", texte_lecture);
-		}
 		if(bp2==enfonce && bp2_prec != bp2)
 		{
+			//Lecture des canaux du detecteur
 			TCS_read_colors(&rouge, &vert, &bleu, &intensite);
-			sprintf(texte_rouge, "r%d v%d", rouge, vert);
-			sprintf(texte_lecture, "b%d i%d", bleu, intensite);
-			affichage(texte_rouge, texte_lecture);
+			traduction_color(rouge, vert, bleu, intensite, &couleur);
+
 		}
 		bp1_prec = bp1;
 		bp2_prec = bp2;

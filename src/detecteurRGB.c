@@ -4,6 +4,7 @@
 #include "syscon.h"
 #include "lib_ENS_II1_lcd.h"
 #include "i2c.h"
+#include "mrt.h"
 #include "rom_api.h"
 #include "utilities.h"
 #include "swm.h"
@@ -111,7 +112,6 @@ void TCS_read_colors(uint16_t *rouge, uint16_t *vert, uint16_t *bleu, uint16_t *
 
 }
 
-
 /**
  * Affiche du texte sur les deux lignes du lcd
  * parametres :
@@ -162,8 +162,21 @@ void traduction_color(uint16_t rouge, uint16_t vert, uint16_t bleu, uint16_t int
 	else if(vertp <25) *couleur = "rose";
 	else if(rougep <25) *couleur = "cyan";
 
-	sprintf(texte_couleur, "r%d%% v%d%% b%d%%", (int)rougep, (int)vertp, (int)bleup);
+	sprintf(texte_couleur, "r%d%% v%d%% b%d%%", (int) (rougep+0.5), (int) (vertp+0.5), (int) (bleup+0.5));
 	affichage(*couleur, texte_couleur);
+}
+
+
+void MRT_IRQHandler(void)
+{
+
+	//Variable des couleurs lues
+	uint16_t rouge, bleu, vert, intensite;
+	char couleur[16];
+
+	//Lecture des canaux du detecteur
+	TCS_read_colors(&rouge, &vert, &bleu, &intensite);
+	traduction_color(rouge, vert, bleu, intensite, &couleur);
 }
 
 int main(void) {
@@ -186,8 +199,22 @@ int main(void) {
 		LPC_SYSCON->PRESETCTRL0 |= ~(GPIO0_RST_N & GPIOINT_RST_N);
 
 	//Mise en fonctionnement des périphériques utilisés
-		LPC_SYSCON->SYSAHBCLKCTRL0 |= (IOCON | GPIO0 | SWM | CTIMER0 | GPIO_INT);
+		LPC_SYSCON->SYSAHBCLKCTRL0 |= (IOCON | GPIO0 | SWM | CTIMER0 | GPIO_INT | MRT);
 
+	//Configuration du MRT
+		//Reset du MRT
+		LPC_SYSCON->PRESETCTRL0 &= MRT_RST_N;
+		LPC_SYSCON->PRESETCTRL0 |= ~MRT_RST_N;
+		//Enable du MRT et mode repeat interrupt
+		LPC_MRT->Channel[0].CTRL |= (1 << MRT_INTEN);
+		LPC_MRT->Channel[0].CTRL &= ~(1 << MRT_MODE);
+		//Tempo du MRT
+		LPC_MRT->Channel[0].INTVAL =  (uint32_t) 15000000 / 100 ; // freuence de 100Hz
+		LPC_MRT->Channel[0].INTVAL |=  ForceLoad;
+
+	//Confuguration interruption MRT
+		NVIC->ISER[0] = (1<<10); //enable interruption MRT
+		NVIC->IP[2] &= ~(0b11 << 22); //Priorite maximale pour l'interruption du mrt
 
 	//Initialisation de l'afficheur lcd et affichage d'un texte
 	init_lcd();
@@ -200,10 +227,19 @@ int main(void) {
 
 		if(bp2==enfonce && bp2_prec != bp2)
 		{
+			//arret de la mesure continue
+			LPC_MRT->Channel[0].INTVAL =  (uint32_t) 0;
+			LPC_MRT->Channel[0].INTVAL |=  ForceLoad;
 			//Lecture des canaux du detecteur
 			TCS_read_colors(&rouge, &vert, &bleu, &intensite);
 			traduction_color(rouge, vert, bleu, intensite, &couleur);
 
+		}
+		if (bp1==enfonce && bp1_prec != bp1)
+		{
+			//Mise en marche du timer
+			LPC_MRT->Channel[0].INTVAL =  (uint32_t) 15000000 / 100 ;
+			LPC_MRT->Channel[0].INTVAL |=  ForceLoad;
 		}
 		bp1_prec = bp1;
 		bp2_prec = bp2;

@@ -135,7 +135,7 @@ int main(void) {
 		//Initialisation de l'afficheur lcd et affichage d'un texte
 		init_lcd();
 		affichage("Detecteur colors", "appuyez sur BP2!");
-		TCS_write_reg(0x00, 0b00000011);
+		TCS_write_reg(TCS34725_ENABLE, (1 << AEN) | (1 << PON));
 
 	//Enabale du  MRT
 		LPC_MRT->Channel[0].CTRL |= (1 << MRT_INTEN);

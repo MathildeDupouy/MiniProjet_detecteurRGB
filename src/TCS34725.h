@@ -13,9 +13,10 @@
 
 #define TCS34725_ADDRESS 0x52 //(0x29)     //I2C address 0b01010010
 
-#define TCS34725_ENABLE 0x00
-#define AEN 1
-#define PON 0
+#define TCS34725_ENABLE 0x00 	//I2C enable register
+#define PON 0					// Power ON
+#define AEN 1					// RGBC enable
+
 
 #define TCS34725_CDATAL (0x14) // Intensite canal bits de poids faibles
 #define TCS34725_CDATAH (0x15) // Intensite canal bits de poids forts

@@ -12,7 +12,7 @@
 
 #include "TCS34725.h"
 
-
+//Registres lies a l'extension
 #define BP1 LPC_GPIO_PORT->B0[13]
 #define BP2 LPC_GPIO_PORT->B0[12]
 #define LED1 LPC_GPIO_PORT->B0[19]
@@ -23,94 +23,16 @@
 #define enfonce 0
 #define relache 1
 
-uint8_t erreur_demande = 0;
 
-/**
- * Le type est par défaut : Repeated byte protocol transaction
- * reg_ad : adresse du registre que l'on veut appeler, sur 5bits
- * valeur : valeur a ecrire dans le registre
- */
-void TCS_write_reg(uint8_t reg_ad,uint8_t valeur){
+#define PERIODE_MESURE 10 //Une mesure toutes les PERIODE_MESURE secondes
 
-	uint8_t I2CMasterBuffer[3]; // ad, #reg, valeur
-	uint8_t I2CWriteLength=2;
-	I2CMasterBuffer[0]=TCS34725_ADDRESS;
+//Initialisation variables globales
+	//Variable des couleurs lues
+	uint16_t rouge = 0, bleu = 0, vert = 0, intensite = 0;
 
-	//Command code
-	I2CMasterBuffer[1]=(0b100 << 5) | reg_ad; //CMD 1, TYPE 00, ADDR = 0b100AD
-	//ADDRID = 0b1001 0010 = 92 (AD 0x12)
-	//ADDRRed = 0b1001 0110 = 96 (AD 0x16)
-	I2CMasterBuffer[2]=valeur;
-	I2CmasterWrite(I2CMasterBuffer, I2CWriteLength );
-}
-
-uint8_t TCS_read_reg(uint8_t reg_ad){
-	uint8_t I2CMasterBuffer[2]; // ad, #reg
-	uint8_t I2CSlaveBuffer[1];
-	uint8_t I2CWriteLength=1;
-	uint8_t I2CReadLength=1;
-	I2CMasterBuffer[0]=TCS34725_ADDRESS;
-	I2CMasterBuffer[1]=(0b100 << 5) | reg_ad;
-	I2CmasterWriteRead( I2CMasterBuffer, I2CSlaveBuffer, I2CWriteLength, I2CReadLength );
-	// autre possibilité :
-//	I2CmasterWrite(I2CMasterBuffer, I2CWriteLength );
-//	I2CmasterRead( MCP23_I2C_AD, I2CSlaveBuffer, I2CReadLength );
-	return I2CSlaveBuffer[0];
-}
+	uint32_t compteur = 0;
 
 
-/**
- * Lecture d'une couleur
- * color   :   caractere 'r' (rouge), 'v' (vert), 'b' (bleu)
- */
-uint8_t TCS_read_color(char color){
-	uint8_t reg_ad;
-	uint8_t valeur = 0;
-
-	switch (color) {
-		case 'r':
-			reg_ad = 0x16; //low_byte
-			break;
-		case 'v':
-			reg_ad = 0x18;
-			break;
-		case 'b':
-			reg_ad = 0x1A;
-			break;
-		default:
-			erreur_demande = 1;
-			break;
-	}
-	if (reg_ad != 0)
-	{
-		valeur = TCS_read_reg(reg_ad);
-	}
-	return valeur;
-}
-
-/**
- * Lecture des couleurs
- * Entrees : intensite, rouge, vert et bleu   :  pointeur vers ou stocker les couleurs et l'intensite
- */
-void TCS_read_colors(uint16_t *rouge, uint16_t *vert, uint16_t *bleu, uint16_t *intensite)
-{
-	uint8_t reg_ad = 0x14; //Adresse du bit de la donnée de clarte
-
-	uint8_t I2CMasterBuffer[2]; // ad, #reg
-	uint8_t I2CSlaveBuffer[1];
-	uint8_t I2CWriteLength=1;
-	uint8_t I2CReadLength=8;
-	I2CMasterBuffer[0]=TCS34725_ADDRESS;
-	I2CMasterBuffer[1]=(0b101 << 5) | reg_ad; //Command, auto-increment protocol, adresse du registre
-	I2CmasterWriteRead( I2CMasterBuffer, I2CSlaveBuffer, I2CWriteLength, I2CReadLength );
-
-	//Recuperation des donnees (rgb avec lowbyte puis high byte a chaque fois)
-	*intensite = (I2CSlaveBuffer[1]<<8) | I2CSlaveBuffer[0];
-	*rouge = (I2CSlaveBuffer[3]<<8) | I2CSlaveBuffer[2];
-	*vert = (I2CSlaveBuffer[5]<<8) | I2CSlaveBuffer[4];
-	*bleu = (I2CSlaveBuffer[7]<<8) | I2CSlaveBuffer[6];
-
-}
 
 /**
  * Affiche du texte sur les deux lignes du lcd
@@ -169,30 +91,24 @@ void traduction_color(uint16_t rouge, uint16_t vert, uint16_t bleu, uint16_t int
 
 void MRT_IRQHandler(void)
 {
-
-	//Variable des couleurs lues
-	uint16_t rouge, bleu, vert, intensite;
-	char couleur[16];
-
 	//Lecture des canaux du detecteur
 	TCS_read_colors(&rouge, &vert, &bleu, &intensite);
-	traduction_color(rouge, vert, bleu, intensite, &couleur);
+	compteur++;
 }
 
 int main(void) {
-	//Variables pour les etats des boutons
-	uint8_t bp1 = BP1;
-	uint8_t bp1_prec = BP1;
-	uint8_t bp2 = BP2;
-	uint8_t bp2_prec = BP2;
+	//Variables
+		//Variables pour les etats des boutons
+		uint8_t bp1 = BP1;
+		uint8_t bp1_prec = BP1;
+		uint8_t bp2 = BP2;
+		uint8_t bp2_prec = BP2;
+		//Variable des couleurs lues precedemment
+		uint16_t rouge_prec = rouge, bleu_prec = bleu, vert_prec = vert, intensite_prec = intensite;
+		char couleur[16];
 
-
-	//Variable des couleurs lues
-	uint16_t rouge, bleu, vert, intensite;
-	char couleur[16];
-
-	//Configuration de l'horloge à 15 MHz
-		LPC_PWRD_API->set_fro_frequency(30000);
+	//Configuration de l'horloge à 18 (ou plutot 9??) MHz
+		LPC_PWRD_API->set_fro_frequency(18000);
 
 	// Peripheral reset to the GPIO0 and pin interrupt modules. '0' asserts, '1' deasserts reset.
 		LPC_SYSCON->PRESETCTRL0 &=  (GPIO0_RST_N & GPIOINT_RST_N);
@@ -205,42 +121,55 @@ int main(void) {
 		//Reset du MRT
 		LPC_SYSCON->PRESETCTRL0 &= MRT_RST_N;
 		LPC_SYSCON->PRESETCTRL0 |= ~MRT_RST_N;
-		//Enable du MRT et mode repeat interrupt
-		LPC_MRT->Channel[0].CTRL |= (1 << MRT_INTEN);
+		//mode repeat interrupt
+		//LPC_MRT->Channel[0].CTRL |= (1 << MRT_INTEN);
 		LPC_MRT->Channel[0].CTRL &= ~(1 << MRT_MODE);
-		//Tempo du MRT
-		LPC_MRT->Channel[0].INTVAL =  (uint32_t) 15000000 / 100 ; // freuence de 100Hz
+		//Tempo du MRT (apres initialisation LCD car fait appel a l'I2C)
+		LPC_MRT->Channel[0].INTVAL =  (uint32_t) 9000000 * PERIODE_MESURE ;
 		LPC_MRT->Channel[0].INTVAL |=  ForceLoad;
 
 	//Confuguration interruption MRT
 		NVIC->ISER[0] = (1<<10); //enable interruption MRT
 		NVIC->IP[2] &= ~(0b11 << 22); //Priorite maximale pour l'interruption du mrt
 
-	//Initialisation de l'afficheur lcd et affichage d'un texte
-	init_lcd();
-	affichage("Detecteur colors", "appuyez sur BP2!");
-	TCS_write_reg(0x00, 0b00000011);
+		//Initialisation de l'afficheur lcd et affichage d'un texte
+		init_lcd();
+		affichage("Detecteur colors", "appuyez sur BP2!");
+		TCS_write_reg(0x00, 0b00000011);
+
+	//Enabale du  MRT
+		LPC_MRT->Channel[0].CTRL |= (1 << MRT_INTEN);
 
 	while (1) {
 		bp1 = BP1;
 		bp2 = BP2;
 
+
 		if(bp2==enfonce && bp2_prec != bp2)
 		{
 			//arret de la mesure continue
-			LPC_MRT->Channel[0].INTVAL =  (uint32_t) 0;
-			LPC_MRT->Channel[0].INTVAL |=  ForceLoad;
+			LPC_MRT->Channel[0].CTRL &= ~(1 << MRT_INTEN);
 			//Lecture des canaux du detecteur
 			TCS_read_colors(&rouge, &vert, &bleu, &intensite);
-			traduction_color(rouge, vert, bleu, intensite, &couleur);
-
 		}
 		if (bp1==enfonce && bp1_prec != bp1)
 		{
 			//Mise en marche du timer
-			LPC_MRT->Channel[0].INTVAL =  (uint32_t) 15000000 / 100 ;
+			LPC_MRT->Channel[0].CTRL |= (1 << MRT_INTEN);
+			LPC_MRT->Channel[0].INTVAL =  (uint32_t) 9000000 * PERIODE_MESURE ;
 			LPC_MRT->Channel[0].INTVAL |=  ForceLoad;
 		}
+		//Affichage lors d'un changement des valeurs rgb (variables globales)
+		if ((rouge != rouge_prec) || (vert != vert_prec) || (bleu != bleu_prec) || (intensite != intensite_prec))
+		{
+			traduction_color(rouge, vert, bleu, intensite, &couleur);
+			rouge_prec = rouge;
+			bleu_prec = bleu;
+			vert_prec = vert;
+			intensite_prec = intensite;
+		}
+
+
 		bp1_prec = bp1;
 		bp2_prec = bp2;
 	} // end of while(1)

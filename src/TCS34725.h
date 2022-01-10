@@ -1,8 +1,10 @@
 /*!
- *  Informatique industrielle mini-projet 2021
+ *  Informatique industrielle mini-projet 2022
  *  Auteur : Mathilde Dupouy
  *
- *  Pour la définition de tous les registres :
+ *  Bibliotheque pour le detecteur de couleur TCS34725
+ *
+ *  Inspiration pour la déclaration de certains registres :
  *  Copyright (c) 2013, Adafruit Industries
  *  All rights reserved.
  *

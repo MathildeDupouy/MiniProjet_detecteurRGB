@@ -1,8 +1,8 @@
 /*!
- *  Informatique industrielle mini-projet 2021
+ *  Informatique industrielle mini-projet 2022
  *  Auteur : Mathilde Dupouy
  *
- *
+ *  Bibliotheque pour le detecteur de couleur TCS34725
  */
 
 #include <math.h>

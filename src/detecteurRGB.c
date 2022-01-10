@@ -1,4 +1,10 @@
-// Programme de base TP II ENS
+/*!
+ *  Informatique industrielle mini-projet 2022
+ *  Auteur : Mathilde Dupouy
+ *
+ *  Code principal
+ */
+
 #include <stdio.h>
 #include "LPC8xx.h"
 #include "syscon.h"
@@ -29,9 +35,6 @@
 //Initialisation variables globales
 	//Variable des couleurs lues
 	uint16_t rouge = 0, bleu = 0, vert = 0, intensite = 0;
-
-	uint32_t compteur = 0;
-
 
 
 /**
@@ -93,7 +96,6 @@ void MRT_IRQHandler(void)
 {
 	//Lecture des canaux du detecteur
 	TCS_read_colors(&rouge, &vert, &bleu, &intensite);
-	compteur++;
 	LPC_MRT->Channel[0].STAT |= (1 << MRT_INTFLAG); //On abaisse le drapeau
 }
 
@@ -123,11 +125,7 @@ int main(void) {
 		LPC_SYSCON->PRESETCTRL0 &= MRT_RST_N;
 		LPC_SYSCON->PRESETCTRL0 |= ~MRT_RST_N;
 		//mode repeat interrupt
-		//LPC_MRT->Channel[0].CTRL |= (1 << MRT_INTEN);
 		LPC_MRT->Channel[0].CTRL &= ~(1 << MRT_MODE);
-		//Tempo du MRT (apres initialisation LCD car fait appel a l'I2C)
-		//LPC_MRT->Channel[0].INTVAL =  (uint32_t) 15000000 * PERIODE_MESURE ;
-		//LPC_MRT->Channel[0].INTVAL |=  ForceLoad;
 
 	//Confuguration interruption MRT
 		NVIC->ISER[0] = (1<<10); //enable interruption MRT
@@ -135,11 +133,11 @@ int main(void) {
 
 		//Initialisation de l'afficheur lcd et affichage d'un texte
 		init_lcd();
-		affichage("Detecteur colors", "appuyez sur BP2!");
+		affichage("Detecteur colors", "2022 - II ENS");
+		for(int j = 0; j < 1000000 ; j++); //attente
+		affichage("BP1>Det. continue", "BP2>appui = det.");
 		TCS_write_reg(TCS34725_ENABLE, (1 << AEN) | (1 << PON));
 
-	//Enabale du  MRT
-		//LPC_MRT->Channel[0].CTRL |= (1 << MRT_INTEN);
 
 	while (1) {
 		bp1 = BP1;

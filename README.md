@@ -5,6 +5,7 @@ Auteur : Mathilde Dupouy
 * [Technologies](#technologies)
 * [Utilisation](#utilisation)
 * [Réalisation](#réalisation)
+* [Pistes d'améliorations](#pistes d'améliorations)
 
 ## Introduction
 Ce projet a pour but de réaliser un détecteur de couleur, qui peut par exemple être utile pour un utilisateur aveugle.
@@ -36,34 +37,11 @@ La récupération des valeurs se fait ensuite via le protocole I2C et les spéci
   <img width="361" alt="image" src="https://user-images.githubusercontent.com/82039222/148555989-f27e20a0-67e4-4e45-aeb0-ce40f7dc0dbd.png">
 </p>
 Pour la lecture des couleurs, le registre appelé par le registre de commande est celui du premier canal de Clear, et on lit les huit registres suivants pour obtenir toutes les données RGBC. En effet les données d'un canal sont stockées dans deux registres de 8 bits, l'un donnant les bits de poid fort et l'autre les bits de poid faible. Les données sont ainsi sur 16 bits chacune.
-Ainsi, ces fonctions ont été implémentées dans une bibliothèque dénommée TCS34725.h dans ce projet, pour clarifier le code et pour la réutilisabilité. On y trouve les fonctions suivantes, voir le code pour le détail de leur implémentation :
-``` c
-/**
- * Ecrire une valeur dans un registre du TCS34725
- * Le type est par défaut : Repeated byte protocol transaction
- * reg_ad : adresse du registre que l'on veut appeler, sur 5bits
- * valeur : valeur a ecrire dans le registre
- */
+Ainsi, ces fonctions ont été implémentées dans une bibliothèque dénommée TCS34725.h dans ce projet, pour clarifier le code et pour la réutilisabilité. On y trouve les fonctions suivantes, voir le code pour le détail de leur documentation et de leur implémentation :
+```
 void TCS_write_reg(uint8_t reg_ad, uint8_t valeur);
-
-/**
- * Lire une valeur dans un registre du TCS34725
- * Le type est par défaut : Auto increment byte protocol transaction
- * reg_ad : adresse du registre que l'on veut appeler, sur 5bits
- * valeur : valeur a ecrire dans le registre
- */
 uint8_t TCS_read_reg(uint8_t reg_ad);
-
-/**
- * Lecture de la couleur demandee en argument
- * color   :   caractere 'r' (rouge), 'v' (vert), 'b' (bleu)
- */
 uint8_t TCS_read_color(char color);
-
-/**
- * Lecture des couleurs
- * Entrees : intensite, rouge, vert et bleu   :  pointeur vers ou stocker les couleurs et l'intensite
- */
 void TCS_read_colors(uint16_t *rouge, uint16_t *vert, uint16_t *bleu, uint16_t *intensite);
 ```
 

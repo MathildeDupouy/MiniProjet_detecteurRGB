@@ -24,7 +24,7 @@
 #define relache 1
 
 
-#define PERIODE_MESURE 10 //Une mesure toutes les PERIODE_MESURE secondes
+#define PERIODE_MESURE 0.1 //Une mesure toutes les PERIODE_MESURE secondes
 
 //Initialisation variables globales
 	//Variable des couleurs lues
@@ -69,9 +69,9 @@ void traduction_color(uint16_t rouge, uint16_t vert, uint16_t bleu, uint16_t int
 	float bleup = bleu / somme*100;
 	float vertp = vert / somme*100;
 
-	if (rougep > 55) *couleur = "rouge";
+	if (rougep > 50) *couleur = "rouge";
 	else if (bleup > 45)  *couleur = "bleu";
-	else if (vertp > 45)  *couleur = "vert";
+	else if (vertp > 42)  *couleur = "vert";
 
 	else if ((rougep >= 20) && (rougep <= 40)) //Rouge vaut 30% a dix pourcents pres
 	{
@@ -94,6 +94,7 @@ void MRT_IRQHandler(void)
 	//Lecture des canaux du detecteur
 	TCS_read_colors(&rouge, &vert, &bleu, &intensite);
 	compteur++;
+	LPC_MRT->Channel[0].STAT |= (1 << MRT_INTFLAG); //On abaisse le drapeau
 }
 
 int main(void) {
@@ -107,8 +108,8 @@ int main(void) {
 		uint16_t rouge_prec = rouge, bleu_prec = bleu, vert_prec = vert, intensite_prec = intensite;
 		char couleur[16];
 
-	//Configuration de l'horloge à 18 (ou plutot 9??) MHz
-		LPC_PWRD_API->set_fro_frequency(18000);
+	//Configuration de l'horloge à 15 MHz
+		LPC_PWRD_API->set_fro_frequency(30000);
 
 	// Peripheral reset to the GPIO0 and pin interrupt modules. '0' asserts, '1' deasserts reset.
 		LPC_SYSCON->PRESETCTRL0 &=  (GPIO0_RST_N & GPIOINT_RST_N);
@@ -125,8 +126,8 @@ int main(void) {
 		//LPC_MRT->Channel[0].CTRL |= (1 << MRT_INTEN);
 		LPC_MRT->Channel[0].CTRL &= ~(1 << MRT_MODE);
 		//Tempo du MRT (apres initialisation LCD car fait appel a l'I2C)
-		LPC_MRT->Channel[0].INTVAL =  (uint32_t) 9000000 * PERIODE_MESURE ;
-		LPC_MRT->Channel[0].INTVAL |=  ForceLoad;
+		//LPC_MRT->Channel[0].INTVAL =  (uint32_t) 15000000 * PERIODE_MESURE ;
+		//LPC_MRT->Channel[0].INTVAL |=  ForceLoad;
 
 	//Confuguration interruption MRT
 		NVIC->ISER[0] = (1<<10); //enable interruption MRT
@@ -138,7 +139,7 @@ int main(void) {
 		TCS_write_reg(TCS34725_ENABLE, (1 << AEN) | (1 << PON));
 
 	//Enabale du  MRT
-		LPC_MRT->Channel[0].CTRL |= (1 << MRT_INTEN);
+		//LPC_MRT->Channel[0].CTRL |= (1 << MRT_INTEN);
 
 	while (1) {
 		bp1 = BP1;
@@ -156,7 +157,7 @@ int main(void) {
 		{
 			//Mise en marche du timer
 			LPC_MRT->Channel[0].CTRL |= (1 << MRT_INTEN);
-			LPC_MRT->Channel[0].INTVAL =  (uint32_t) 9000000 * PERIODE_MESURE ;
+			LPC_MRT->Channel[0].INTVAL =  (uint32_t) 15000000 * PERIODE_MESURE ;
 			LPC_MRT->Channel[0].INTVAL |=  ForceLoad;
 		}
 		//Affichage lors d'un changement des valeurs rgb (variables globales)

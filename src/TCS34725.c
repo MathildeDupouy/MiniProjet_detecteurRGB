@@ -66,7 +66,7 @@ uint8_t TCS_read_color(char color){
 			reg_ad = TCS34725_GDATAL;
 			break;
 		case 'b':
-			reg_ad = TCS34725_BDATALs;
+			reg_ad = TCS34725_BDATAL;
 			break;
 		default:
 			break;

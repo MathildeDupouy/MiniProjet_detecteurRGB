@@ -5,7 +5,7 @@ Auteur : Mathilde Dupouy
 * [Technologies](#technologies)
 * [Utilisation](#utilisation)
 * [Réalisation](#réalisation)
-* [Pistes d'améliorations](#pistes d'améliorations)
+* [Pistes d'améliorations](#pistes-d'améliorations)
 
 ## Introduction
 Ce projet a pour but de réaliser un détecteur de couleur, qui peut par exemple être utile pour un utilisateur aveugle.
